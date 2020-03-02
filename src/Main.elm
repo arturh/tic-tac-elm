@@ -1,6 +1,8 @@
 module Main exposing (..)
 
 import Dict
+import List exposing (range)
+
 
 import Browser
 import Html exposing (Html, button, div, text, table, tr, td)
@@ -45,25 +47,17 @@ aButton model x y =
     in
     button [ onClick (PlayMove x y) ] [ text (cellText) ]
 
+mkTable : (a -> b -> Html msg) -> List a -> List b -> Html msg
+mkTable mkData rows columns =
+    let
+        mkCell a x = [mkData a x]
+        mkRow a = List.map (td [] << mkCell a) columns
+        data = List.map (tr [] << mkRow) rows
+    in
+    table [] data
+
 view model =
     div [] [
         text (playerName model.currentPlayer)
-        , table [] [
-            tr [] [
-                td [] [aButton model 0 0]
-                , td [] [aButton model 0 1]
-                , td [] [aButton model 0 2]
-            ],
-            tr [] [
-                td [] [aButton model 1 0]
-                , td [] [aButton model 1 1]
-                , td [] [aButton model 1 2]
-            ],
-            tr [] [
-                td [] [aButton model 2 0]
-                , td [] [aButton model 2 1]
-                , td [] [aButton model 2 2]
-            ]
-        ]
+        , mkTable (aButton model) (range 0 2) (range 0 2)
     ]
-  
