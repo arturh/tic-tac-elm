@@ -3,15 +3,23 @@ module Main exposing (..)
 import Dict
 import List exposing (range)
 
+import Random
 
 import Browser
 import Html exposing (Html, button, div, text, table, tr, td)
 import Html.Events exposing (onClick)
 
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+    Browser.element
+        { init = init
+        , subscriptions = subscriptions
+        , update = update
+        , view = view
+        }
 
-type Msg = NoOp | PlayMove Int Int
+noCmd x = (x, Cmd.none)
+
+type Msg = NoOp | PlayMove Int Int | Random
 
 type Player = Player1 | Player2
 
@@ -20,26 +28,33 @@ playerName player =
         Player1 -> "X"
         Player2 -> "O"
 
-init = {
-        currentPlayer = Player1
-        , moves = []
-        , cells = Dict.empty
+emptyModel =
+    { currentPlayer = Player1
+    , moves = []
+    , cells = Dict.empty
     }
+
+init () = noCmd emptyModel
+
+subscriptions _ = Sub.none
 
 update msg model =
     case msg of
-        NoOp -> model
+        NoOp -> noCmd model
         PlayMove x y -> if Dict.member (x ,y) model.cells
             then
-                model
+                noCmd model
             else
-                { model |
+                noCmd { model |
                 currentPlayer = case model.currentPlayer of
                     Player1 -> Player2
                     Player2 -> Player1
                 , moves = (PlayMove x y) :: model.moves
                 , cells = Dict.insert (x, y) model.currentPlayer model.cells
                 }
+        Random -> case validMoves model of
+            [] -> noCmd model
+            m :: ms -> (model, Random.generate (uncurry PlayMove) <| Random.uniform m ms)
 
 aButton model x y =
     let
@@ -63,7 +78,10 @@ view model =
     div [] [
         text (playerName model.currentPlayer)
         , mkTable (aButton model) (range 0 2) (range 0 2)
+        , button [ onClick Random ] [text "Random"]
     ]
+
+uncurry f (x, y) = f x y
 
 pair : x -> y -> (x , y)
 pair x y = (x , y)
