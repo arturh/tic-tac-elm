@@ -64,3 +64,15 @@ view model =
         text (playerName model.currentPlayer)
         , mkTable (aButton model) (range 0 2) (range 0 2)
     ]
+
+pair : x -> y -> (x , y)
+pair x y = (x , y)
+
+cartesian : (a -> b -> c) -> List a -> List b -> List c
+cartesian f la lb = la |> List.concatMap (\x -> List.map (f x) lb)
+
+validMoves model =
+    let
+        played pos = Dict.member pos model.cells
+        allPositions = cartesian pair (range 0 2) (range 0 2)
+    in List.filter (not << played) allPositions
