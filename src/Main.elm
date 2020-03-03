@@ -29,17 +29,20 @@ init = {
 update msg model =
     case msg of
         NoOp -> model
-        PlayMove x y -> { 
-            model |
-            currentPlayer = case model.currentPlayer of
-                Player1 -> Player2
-                Player2 -> Player1
-            , moves = (PlayMove x y) :: model.moves
-            , cells = Dict.insert (x, y) model.currentPlayer model.cells
-            }
+        PlayMove x y -> if Dict.member (x ,y) model.cells
+            then
+                model
+            else
+                { model |
+                currentPlayer = case model.currentPlayer of
+                    Player1 -> Player2
+                    Player2 -> Player1
+                , moves = (PlayMove x y) :: model.moves
+                , cells = Dict.insert (x, y) model.currentPlayer model.cells
+                }
 
 aButton model x y =
-    let 
+    let
         cellText = case (Dict.get (x, y) model.cells) of
             Nothing -> "."
             Just Player1 -> "X"
