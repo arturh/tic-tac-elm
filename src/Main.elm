@@ -19,7 +19,7 @@ main =
 
 noCmd x = (x, Cmd.none)
 
-type Msg = NoOp | PlayMove Int Int | Random
+type Msg = NoOp | PlayMove Int Int | Random | Reset
 
 type Player = Player1 | Player2
 
@@ -55,6 +55,7 @@ update msg model =
         Random -> case validMoves model of
             [] -> noCmd model
             m :: ms -> (model, Random.generate (uncurry PlayMove) <| Random.uniform m ms)
+        Reset -> noCmd emptyModel
 
 aButton model x y =
     let
@@ -79,6 +80,7 @@ view model =
         text (playerName model.currentPlayer)
         , mkTable (aButton model) (range 0 2) (range 0 2)
         , button [ onClick Random ] [text "Random"]
+        , button [ onClick Reset ] [text "Reset"]
     ]
 
 uncurry f (x, y) = f x y
