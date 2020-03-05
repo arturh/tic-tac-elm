@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Dict
 import List exposing (range)
+import Tuple exposing (pair)
 
 import Random
 
@@ -84,9 +85,6 @@ view model =
     ]
 
 uncurry f (x, y) = f x y
-
-pair : x -> y -> (x , y)
-pair x y = (x , y)
 
 cartesian : (a -> b -> c) -> List a -> List b -> List c
 cartesian f la lb = la |> List.concatMap (\x -> List.map (f x) lb)
