@@ -109,6 +109,27 @@ aButton model x y =
     button [ onClick (PlayMove x y) ] [ text cellText ]
 
 
+{-| Construct a table without `Attributes` crossing a `List a` and a `List b`
+through a generating function (a -> b -> Html msg) to produce a table with
+rows a and columns b.
+
+    mkTable _ [] _ = table [] []
+    mkTable _ (a1 :: ... :: an) [] = table [] (List.repeat n (tr [] []))
+    mkTable f (a1 :: ... :: an) (b1 :: ... :: bk) = table [] [
+        tr [] [
+            td [] [f a1 b1],
+            ...
+            td [] [f a1 bk]
+        ],
+        ...
+        tr [] [
+            td [] [f an b1],
+            ...
+            td [] [f an bk]
+        ],
+    ]
+
+-}
 mkTable : (a -> b -> Html msg) -> List a -> List b -> Html msg
 mkTable mkData rows columns =
     let
@@ -133,10 +154,27 @@ view model =
         ]
 
 
+{-| Natural transformation from `( a, b ) -> c` to `a -> b -> c`
+
+    uncurry Tuple.first a _ a
+    uncurry Tuple.second _ b b
+    uncurry (mapBoth f g) a b = ( f a, g b )
+
+-}
 uncurry f ( x, y ) =
     f x y
 
 
+{-| Monoidal (i.e. Applicative) structure for the List Monad.
+
+    cartesian _ [] _ = []
+    cartesian _ _ [] = []
+    cartesian f (a :: as) bs = (map (f a) bs) ++ (cartesian f as bs)
+
+    cartesian pair (a1 :: ... :: an) (b1 :: ... :: bk) =
+        [ (a1, b1), ... , (a1, bk), (a2, b1), ... , (an, b1), ... , (an , bk)]
+
+-}
 cartesian : (a -> b -> c) -> List a -> List b -> List c
 cartesian f la lb =
     la |> List.concatMap (\x -> List.map (f x) lb)
