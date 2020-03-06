@@ -22,9 +22,13 @@ noCmd x =
     ( x, Cmd.none )
 
 
+type alias Position =
+    ( Int, Int )
+
+
 type Msg
     = NoOp
-    | PlayMove Int Int
+    | PlayMove Position
     | Random
     | Undo
     | Reset
@@ -52,7 +56,7 @@ type Moves
 type alias Model =
     { currentPlayer : Player
     , previousMove : Moves
-    , cells : Dict ( Int, Int ) Player
+    , cells : Dict Position Player
     }
 
 
@@ -78,8 +82,8 @@ update msg model =
         NoOp ->
             noCmd model
 
-        PlayMove x y ->
-            if Dict.member ( x, y ) model.cells then
+        PlayMove pos ->
+            if Dict.member pos model.cells then
                 noCmd model
 
             else
@@ -93,7 +97,7 @@ update msg model =
                                 Player2 ->
                                     Player1
                         , previousMove = Replay msg model
-                        , cells = Dict.insert ( x, y ) model.currentPlayer model.cells
+                        , cells = Dict.insert pos model.currentPlayer model.cells
                     }
 
         Random ->
@@ -102,7 +106,7 @@ update msg model =
                     noCmd model
 
                 m :: ms ->
-                    ( model, Random.generate (uncurry PlayMove) <| Random.uniform m ms )
+                    ( model, Random.generate PlayMove <| Random.uniform m ms )
 
         Undo ->
             case model.previousMove of
@@ -116,10 +120,10 @@ update msg model =
             noCmd emptyModel
 
 
-aButton model x y =
+aButton model pos =
     let
         cellText =
-            case Dict.get ( x, y ) model.cells of
+            case Dict.get pos model.cells of
                 Nothing ->
                     "."
 
@@ -129,7 +133,7 @@ aButton model x y =
                 Just Player2 ->
                     "O"
     in
-    button [ onClick (PlayMove x y) ] [ text cellText ]
+    button [ onClick (PlayMove pos) ] [ text cellText ]
 
 
 {-| Construct a table without `Attributes` crossing a `List a` and a `List b`
@@ -153,11 +157,11 @@ rows a and columns b.
     ]
 
 -}
-mkTable : (a -> b -> Html msg) -> List a -> List b -> Html msg
+mkTable : (( a, b ) -> Html msg) -> List a -> List b -> Html msg
 mkTable mkData rows columns =
     let
         mkCell a x =
-            [ mkData a x ]
+            [ mkData ( a, x ) ]
 
         mkRow a =
             List.map (td [] << mkCell a) columns
@@ -177,18 +181,6 @@ view model =
         , button [ onClick Undo ] [ text "Undo" ]
         , button [ onClick Reset ] [ text "Reset" ]
         ]
-
-
-{-| Natural transformation from `a -> b -> c` to `( a, b ) -> c`.
-
-    uncurry (\x y -> x) = Tuple.first
-    uncurry (\x y -> y) = Tuple.second
-    uncurry pair = id
-
--}
-uncurry : (a -> b -> c) -> ( a, b ) -> c
-uncurry f ( x, y ) =
-    f x y
 
 
 {-| Monoidal (i.e. Applicative) structure for the List Monad.
