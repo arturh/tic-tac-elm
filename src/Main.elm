@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Browser
-import Dict
+import Dict exposing (Dict)
 import Html exposing (Html, button, div, table, td, text, tr)
 import Html.Events exposing (onClick)
 import List exposing (range)
@@ -26,6 +26,7 @@ type Msg
     = NoOp
     | PlayMove Int Int
     | Random
+    | Undo
     | Reset
 
 
@@ -43,9 +44,22 @@ playerName player =
             "O"
 
 
+type Moves
+    = Newgame
+    | Replay Msg Model
+
+
+type alias Model =
+    { currentPlayer : Player
+    , previousMove : Moves
+    , cells : Dict ( Int, Int ) Player
+    }
+
+
+emptyModel : Model
 emptyModel =
     { currentPlayer = Player1
-    , moves = []
+    , previousMove = Newgame
     , cells = Dict.empty
     }
 
@@ -58,6 +72,7 @@ subscriptions _ =
     Sub.none
 
 
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NoOp ->
@@ -77,7 +92,7 @@ update msg model =
 
                                 Player2 ->
                                     Player1
-                        , moves = PlayMove x y :: model.moves
+                        , previousMove = Replay msg model
                         , cells = Dict.insert ( x, y ) model.currentPlayer model.cells
                     }
 
@@ -88,6 +103,14 @@ update msg model =
 
                 m :: ms ->
                     ( model, Random.generate (uncurry PlayMove) <| Random.uniform m ms )
+
+        Undo ->
+            case model.previousMove of
+                Newgame ->
+                    noCmd model
+
+                Replay _ previous ->
+                    noCmd previous
 
         Reset ->
             noCmd emptyModel
@@ -145,11 +168,13 @@ mkTable mkData rows columns =
     table [] data
 
 
+view : Model -> Html Msg
 view model =
     div []
         [ text (playerName model.currentPlayer)
         , mkTable (aButton model) (range 0 2) (range 0 2)
         , button [ onClick Random ] [ text "Random" ]
+        , button [ onClick Undo ] [ text "Undo" ]
         , button [ onClick Reset ] [ text "Reset" ]
         ]
 
