@@ -1,69 +1,209 @@
 module Main exposing (..)
 
-import Dict
-
 import Browser
-import Html exposing (Html, button, div, text, table, tr, td)
+import Dict exposing (Dict)
+import Html exposing (Html, button, div, table, td, text, tr)
 import Html.Events exposing (onClick)
+import List exposing (range)
+import Random
+import Tuple exposing (pair)
+
 
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+    Browser.element
+        { init = init
+        , subscriptions = subscriptions
+        , update = update
+        , view = view
+        }
 
-type Msg = NoOp | PlayMove Int Int
 
-type Player = Player1 | Player2
+noCmd x =
+    ( x, Cmd.none )
+
+
+type alias Position =
+    ( Int, Int )
+
+
+type Msg
+    = NoOp
+    | PlayMove Position
+    | Random
+    | Undo
+    | Reset
+
+
+type Player
+    = Player1
+    | Player2
+
 
 playerName player =
     case player of
-        Player1 -> "X"
-        Player2 -> "O"
+        Player1 ->
+            "X"
 
-init = {
-        currentPlayer = Player1
-        , moves = []
-        , cells = Dict.empty
+        Player2 ->
+            "O"
+
+
+type Moves
+    = Newgame
+    | Replay Msg Model
+
+
+type alias Model =
+    { currentPlayer : Player
+    , previousMove : Moves
+    , cells : Dict Position Player
     }
 
+
+emptyModel : Model
+emptyModel =
+    { currentPlayer = Player1
+    , previousMove = Newgame
+    , cells = Dict.empty
+    }
+
+
+init () =
+    noCmd emptyModel
+
+
+subscriptions _ =
+    Sub.none
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp -> model
-        PlayMove x y -> { 
-            model |
-            currentPlayer = case model.currentPlayer of
-                Player1 -> Player2
-                Player2 -> Player1
-            , moves = (PlayMove x y) :: model.moves
-            , cells = Dict.insert (x, y) model.currentPlayer model.cells
-            }
+        NoOp ->
+            noCmd model
 
-aButton model x y =
-    let 
-        cellText = case (Dict.get (x, y) model.cells) of
-            Nothing -> "."
-            Just Player1 -> "X"
-            Just Player2 -> "O"
+        PlayMove pos ->
+            if Dict.member pos model.cells then
+                noCmd model
+
+            else
+                noCmd
+                    { model
+                        | currentPlayer =
+                            case model.currentPlayer of
+                                Player1 ->
+                                    Player2
+
+                                Player2 ->
+                                    Player1
+                        , previousMove = Replay msg model
+                        , cells = Dict.insert pos model.currentPlayer model.cells
+                    }
+
+        Random ->
+            case validMoves model of
+                [] ->
+                    noCmd model
+
+                m :: ms ->
+                    ( model, Random.generate PlayMove <| Random.uniform m ms )
+
+        Undo ->
+            case model.previousMove of
+                Newgame ->
+                    noCmd model
+
+                Replay _ previous ->
+                    noCmd previous
+
+        Reset ->
+            noCmd emptyModel
+
+
+aButton model pos =
+    let
+        cellText =
+            case Dict.get pos model.cells of
+                Nothing ->
+                    "."
+
+                Just Player1 ->
+                    "X"
+
+                Just Player2 ->
+                    "O"
     in
-    button [ onClick (PlayMove x y) ] [ text (cellText) ]
+    button [ onClick (PlayMove pos) ] [ text cellText ]
 
-view model =
-    div [] [
-        text (playerName model.currentPlayer)
-        , table [] [
-            tr [] [
-                td [] [aButton model 0 0]
-                , td [] [aButton model 0 1]
-                , td [] [aButton model 0 2]
-            ],
-            tr [] [
-                td [] [aButton model 1 0]
-                , td [] [aButton model 1 1]
-                , td [] [aButton model 1 2]
-            ],
-            tr [] [
-                td [] [aButton model 2 0]
-                , td [] [aButton model 2 1]
-                , td [] [aButton model 2 2]
-            ]
-        ]
+
+{-| Construct a table without `Attributes` crossing a `List a` and a `List b`
+through a generating function (a -> b -> Html msg) to produce a table with
+rows a and columns b.
+
+    mkTable _ [] _ = table [] []
+    mkTable _ (a1 :: ... :: an) [] = table [] (List.repeat n (tr [] []))
+    mkTable f (a1 :: ... :: an) (b1 :: ... :: bk) = table [] [
+        tr [] [
+            td [] [f a1 b1],
+            ...
+            td [] [f a1 bk]
+        ],
+        ...
+        tr [] [
+            td [] [f an b1],
+            ...
+            td [] [f an bk]
+        ],
     ]
-  
+
+-}
+mkTable : (( a, b ) -> Html msg) -> List a -> List b -> Html msg
+mkTable mkData rows columns =
+    let
+        mkCell a x =
+            [ mkData ( a, x ) ]
+
+        mkRow a =
+            List.map (td [] << mkCell a) columns
+
+        data =
+            List.map (tr [] << mkRow) rows
+    in
+    table [] data
+
+
+view : Model -> Html Msg
+view model =
+    div []
+        [ text (playerName model.currentPlayer)
+        , mkTable (aButton model) (range 0 2) (range 0 2)
+        , button [ onClick Random ] [ text "Random" ]
+        , button [ onClick Undo ] [ text "Undo" ]
+        , button [ onClick Reset ] [ text "Reset" ]
+        ]
+
+
+{-| Monoidal (i.e. Applicative) structure for the List Monad.
+
+    cartesian _ [] _ = []
+    cartesian _ _ [] = []
+    cartesian f (a :: as) bs = (map (f a) bs) ++ (cartesian f as bs)
+
+    cartesian pair (a1 :: ... :: an) (b1 :: ... :: bk) =
+        [ (a1, b1), ... , (a1, bk), (a2, b1), ... , (an, b1), ... , (an , bk)]
+
+-}
+cartesian : (a -> b -> c) -> List a -> List b -> List c
+cartesian f la lb =
+    la |> List.concatMap (\x -> List.map (f x) lb)
+
+
+validMoves model =
+    let
+        played pos =
+            Dict.member pos model.cells
+
+        allPositions =
+            cartesian pair (range 0 2) (range 0 2)
+    in
+    List.filter (not << played) allPositions
