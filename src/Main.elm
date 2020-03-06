@@ -154,13 +154,14 @@ view model =
         ]
 
 
-{-| Natural transformation from `( a, b ) -> c` to `a -> b -> c`
+{-| Natural transformation from `a -> b -> c` to `( a, b ) -> c`.
 
-    uncurry Tuple.first a _ a
-    uncurry Tuple.second _ b b
-    uncurry (mapBoth f g) a b = ( f a, g b )
+    uncurry (\x y -> x) = Tuple.first
+    uncurry (\x y -> y) = Tuple.second
+    uncurry pair = id
 
 -}
+uncurry : (a -> b -> c) -> ( a, b ) -> c
 uncurry f ( x, y ) =
     f x y
 
