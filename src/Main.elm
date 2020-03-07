@@ -169,7 +169,6 @@ rows a and columns b.
 viewTable : Model -> Html Msg
 viewTable model =
     let
-            
         mkCell a x =
             [ aButton model ( a, x ) ]
 
@@ -205,9 +204,10 @@ rangeBoardSize =
 
 cartesianPairs : List a -> List b -> List ( a, b )
 cartesianPairs xs ys =
-    List.concatMap
-        (\x -> List.map (pair x) ys)
-        xs
+    xs
+        |> List.map
+            (\x -> List.map (pair x) ys) -- produces List List Position
+        |> List.concatMap identity -- flattens list
 
 
 allMoves : List Position
