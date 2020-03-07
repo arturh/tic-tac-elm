@@ -9,6 +9,7 @@ import Random
 import Tuple exposing (pair)
 
 
+main : Program () Model Msg
 main =
     Browser.element
         { init = init
@@ -16,10 +17,6 @@ main =
         , update = update
         , view = view
         }
-
-
-noCmd x =
-    ( x, Cmd.none )
 
 
 type alias Position =
@@ -39,6 +36,7 @@ type Player
     | Player2
 
 
+playerName : Player -> String
 playerName player =
     case player of
         Player1 ->
@@ -68,10 +66,12 @@ emptyModel =
     }
 
 
+init : () -> ( Model, Cmd msg )
 init () =
-    noCmd emptyModel
+    ( emptyModel, Cmd.none )
 
 
+subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
 
@@ -80,30 +80,33 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NoOp ->
-            noCmd model
+            ( model, Cmd.none )
 
         PlayMove pos ->
             if Dict.member pos model.cells then
-                noCmd model
+                ( model, Cmd.none )
 
             else
-                noCmd
-                    { model
-                        | currentPlayer =
-                            case model.currentPlayer of
-                                Player1 ->
-                                    Player2
+                let
+                    newModel =
+                        { model
+                            | currentPlayer =
+                                case model.currentPlayer of
+                                    Player1 ->
+                                        Player2
 
-                                Player2 ->
-                                    Player1
-                        , previousMove = Replay msg model
-                        , cells = Dict.insert pos model.currentPlayer model.cells
-                    }
+                                    Player2 ->
+                                        Player1
+                            , previousMove = Replay msg model
+                            , cells = Dict.insert pos model.currentPlayer model.cells
+                        }
+                in
+                ( newModel, Cmd.none )
 
         Random ->
             case validMoves model of
                 [] ->
-                    noCmd model
+                    ( model, Cmd.none )
 
                 m :: ms ->
                     ( model, Random.generate PlayMove <| Random.uniform m ms )
@@ -111,15 +114,16 @@ update msg model =
         Undo ->
             case model.previousMove of
                 Newgame ->
-                    noCmd model
+                    ( model, Cmd.none )
 
                 Replay _ previous ->
-                    noCmd previous
+                    ( previous, Cmd.none )
 
         Reset ->
-            noCmd emptyModel
+            ( emptyModel, Cmd.none )
 
 
+aButton : Model -> ( Int, Int ) -> Html Msg
 aButton model pos =
     let
         cellText =
@@ -166,44 +170,45 @@ mkTable mkData rows columns =
         mkRow a =
             List.map (td [] << mkCell a) columns
 
-        data =
+        trs =
             List.map (tr [] << mkRow) rows
     in
-    table [] data
+    table [] trs
 
 
 view : Model -> Html Msg
 view model =
     div []
         [ text (playerName model.currentPlayer)
-        , mkTable (aButton model) (range 0 2) (range 0 2)
+        , mkTable (aButton model) rangeBoardSize rangeBoardSize
         , button [ onClick Random ] [ text "Random" ]
         , button [ onClick Undo ] [ text "Undo" ]
         , button [ onClick Reset ] [ text "Reset" ]
         ]
 
+boardSize: Int
+boardSize = 5
 
-{-| Monoidal (i.e. Applicative) structure for the List Monad.
+rangeBoardSize: List Int
+rangeBoardSize =
+    range 0 (boardSize - 1)
 
-    cartesian _ [] _ = []
-    cartesian _ _ [] = []
-    cartesian f (a :: as) bs = (map (f a) bs) ++ (cartesian f as bs)
-
-    cartesian pair (a1 :: ... :: an) (b1 :: ... :: bk) =
-        [ (a1, b1), ... , (a1, bk), (a2, b1), ... , (an, b1), ... , (an , bk)]
-
--}
-cartesian : (a -> b -> c) -> List a -> List b -> List c
-cartesian f la lb =
-    la |> List.concatMap (\x -> List.map (f x) lb)
+cartesian : List a -> List b -> List ( a, b )
+cartesian xs ys =
+    List.concatMap
+        (\x -> List.map (\y -> ( x, y )) ys)
+        xs
 
 
+allMoves : List ( Int, Int )
+allMoves =
+    cartesian rangeBoardSize rangeBoardSize
+
+
+validMoves : Model -> List ( Int, Int )
 validMoves model =
     let
-        played pos =
+        isPlayed pos =
             Dict.member pos model.cells
-
-        allPositions =
-            cartesian pair (range 0 2) (range 0 2)
     in
-    List.filter (not << played) allPositions
+    List.filter (not << isPlayed) allMoves
