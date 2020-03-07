@@ -144,11 +144,11 @@ aButton model pos =
 viewTable : Model -> Html Msg
 viewTable model =
     let
-        mkCell a x =
-            [ aButton model ( a, x ) ]
+        mkCell i j =
+            [ aButton model ( i, j ) ]
 
-        mkRow a =
-            List.map (td [] << mkCell a) rangeBoardSize
+        mkRow i =
+            List.map (td [] << mkCell i) rangeBoardSize
 
         trs =
             List.map (tr [] << mkRow) rangeBoardSize
