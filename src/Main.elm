@@ -87,11 +87,7 @@ update msg model =
                 ( model, Cmd.none )
 
             else
-                let
-                    newModel =
-                        playMove model pos
-                in
-                ( newModel, Cmd.none )
+                ( playMove model pos, Cmd.none )
 
         Random ->
             case validMoves model of
@@ -145,27 +141,6 @@ aButton model pos =
     button [ onClick (PlayMove pos) ] [ text cellText ]
 
 
-{-| Construct a table without `Attributes` crossing a `List a` and a `List b`
-through a generating function (a -> b -> Html msg) to produce a table with
-rows a and columns b.
-
-    mkTable _ [] _ = table [] []
-    mkTable _ (a1 :: ... :: an) [] = table [] (List.repeat n (tr [] []))
-    mkTable f (a1 :: ... :: an) (b1 :: ... :: bk) = table [] [
-        tr [] [
-            td [] [f a1 b1],
-            ...
-            td [] [f a1 bk]
-        ],
-        ...
-        tr [] [
-            td [] [f an b1],
-            ...
-            td [] [f an bk]
-        ],
-    ]
-
--}
 viewTable : Model -> Html Msg
 viewTable model =
     let
@@ -202,17 +177,18 @@ rangeBoardSize =
     range 0 (boardSize - 1)
 
 
+flatten : List (List a) -> List a
+flatten =
+    List.concatMap identity
+
+
 cartesianPairs : List a -> List b -> List ( a, b )
 cartesianPairs xs ys =
     xs
+        -- produces List List Position
         |> List.map
             (\x -> List.map (pair x) ys)
-        -- produces List List Position
-        |> List.concatMap identity
-
-
-
--- flattens list
+        |> flatten
 
 
 allMoves : List Position
