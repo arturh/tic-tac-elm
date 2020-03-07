@@ -206,8 +206,13 @@ cartesianPairs : List a -> List b -> List ( a, b )
 cartesianPairs xs ys =
     xs
         |> List.map
-            (\x -> List.map (pair x) ys) -- produces List List Position
-        |> List.concatMap identity -- flattens list
+            (\x -> List.map (pair x) ys)
+        -- produces List List Position
+        |> List.concatMap identity
+
+
+
+-- flattens list
 
 
 allMoves : List Position
@@ -222,3 +227,16 @@ validMoves model =
             Dict.member pos model.cells
     in
     List.filter (not << isPlayed) allMoves
+
+
+winning : List (List Position)
+winning =
+    [ [ ( 0, 0 ), ( 0, 1 ), ( 0, 2 ) ]
+    , [ ( 1, 0 ), ( 2, 1 ), ( 1, 2 ) ]
+    , [ ( 2, 0 ), ( 2, 1 ), ( 2, 2 ) ]
+    , [ ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ]
+    , [ ( 0, 1 ), ( 1, 1 ), ( 2, 1 ) ]
+    , [ ( 0, 2 ), ( 1, 2 ), ( 2, 2 ) ]
+    , [ ( 0, 0 ), ( 1, 1 ), ( 2, 2 ) ]
+    , [ ( 0, 2 ), ( 1, 1 ), ( 2, 0 ) ]
+    ]
