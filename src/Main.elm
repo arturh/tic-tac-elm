@@ -113,7 +113,7 @@ update msg model =
             ( emptyModel, Cmd.none )
 
 
-playMove : Model -> ( Int, Int ) -> Model
+playMove : Model -> Position -> Model
 playMove model pos =
     { model
         | currentPlayer =
@@ -128,7 +128,7 @@ playMove model pos =
     }
 
 
-aButton : Model -> ( Int, Int ) -> Html Msg
+aButton : Model -> Position -> Html Msg
 aButton model pos =
     let
         cellText =
@@ -210,12 +210,12 @@ cartesianPairs xs ys =
         xs
 
 
-allMoves : List ( Int, Int )
+allMoves : List Position
 allMoves =
     cartesianPairs rangeBoardSize rangeBoardSize
 
 
-validMoves : Model -> List ( Int, Int )
+validMoves : Model -> List Position
 validMoves model =
     let
         isPlayed pos =
