@@ -48,7 +48,7 @@ playerName player =
 
 type Moves
     = Newgame
-    | Replay Msg Model
+    | Replay Model
 
 
 type alias Model =
@@ -89,17 +89,7 @@ update msg model =
             else
                 let
                     newModel =
-                        { model
-                            | currentPlayer =
-                                case model.currentPlayer of
-                                    Player1 ->
-                                        Player2
-
-                                    Player2 ->
-                                        Player1
-                            , previousMove = Replay msg model
-                            , cells = Dict.insert pos model.currentPlayer model.cells
-                        }
+                        playMove model pos
                 in
                 ( newModel, Cmd.none )
 
@@ -116,11 +106,26 @@ update msg model =
                 Newgame ->
                     ( model, Cmd.none )
 
-                Replay _ previous ->
+                Replay previous ->
                     ( previous, Cmd.none )
 
         Reset ->
             ( emptyModel, Cmd.none )
+
+
+playMove : Model -> ( Int, Int ) -> Model
+playMove model pos =
+    { model
+        | currentPlayer =
+            case model.currentPlayer of
+                Player1 ->
+                    Player2
+
+                Player2 ->
+                    Player1
+        , previousMove = Replay model
+        , cells = Dict.insert pos model.currentPlayer model.cells
+    }
 
 
 aButton : Model -> ( Int, Int ) -> Html Msg
@@ -161,17 +166,18 @@ rows a and columns b.
     ]
 
 -}
-mkTable : (( a, b ) -> Html msg) -> List a -> List b -> Html msg
-mkTable mkData rows columns =
+viewTable : Model -> Html Msg
+viewTable model =
     let
+            
         mkCell a x =
-            [ mkData ( a, x ) ]
+            [ aButton model ( a, x ) ]
 
         mkRow a =
-            List.map (td [] << mkCell a) columns
+            List.map (td [] << mkCell a) rangeBoardSize
 
         trs =
-            List.map (tr [] << mkRow) rows
+            List.map (tr [] << mkRow) rangeBoardSize
     in
     table [] trs
 
@@ -180,29 +186,33 @@ view : Model -> Html Msg
 view model =
     div []
         [ text (playerName model.currentPlayer)
-        , mkTable (aButton model) rangeBoardSize rangeBoardSize
+        , viewTable model
         , button [ onClick Random ] [ text "Random" ]
         , button [ onClick Undo ] [ text "Undo" ]
         , button [ onClick Reset ] [ text "Reset" ]
         ]
 
-boardSize: Int
-boardSize = 5
 
-rangeBoardSize: List Int
+boardSize : Int
+boardSize =
+    3
+
+
+rangeBoardSize : List Int
 rangeBoardSize =
     range 0 (boardSize - 1)
 
-cartesian : List a -> List b -> List ( a, b )
-cartesian xs ys =
+
+cartesianPairs : List a -> List b -> List ( a, b )
+cartesianPairs xs ys =
     List.concatMap
-        (\x -> List.map (\y -> ( x, y )) ys)
+        (\x -> List.map (pair x) ys)
         xs
 
 
 allMoves : List ( Int, Int )
 allMoves =
-    cartesian rangeBoardSize rangeBoardSize
+    cartesianPairs rangeBoardSize rangeBoardSize
 
 
 validMoves : Model -> List ( Int, Int )
