@@ -82,20 +82,11 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        PlayMove pos ->
-            if Dict.member pos model.cells then
-                ( model, Cmd.none )
-
-            else
-                ( playMove model pos, Cmd.none )
+        PlayMove position ->
+            updatePlayMove model position
 
         Random ->
-            case validMoves model of
-                [] ->
-                    ( model, Cmd.none )
-
-                m :: ms ->
-                    ( model, Random.generate PlayMove <| Random.uniform m ms )
+            updateRandom model
 
         Undo ->
             case model.previousMove of
@@ -109,19 +100,43 @@ update msg model =
             ( emptyModel, Cmd.none )
 
 
-playMove : Model -> Position -> Model
-playMove model pos =
-    { model
-        | currentPlayer =
-            case model.currentPlayer of
-                Player1 ->
-                    Player2
+updateRandom : Model -> ( Model, Cmd Msg )
+updateRandom model =
+    case validMoves model of
+        [] ->
+            ( model, Cmd.none )
 
-                Player2 ->
-                    Player1
-        , previousMove = Replay model
-        , cells = Dict.insert pos model.currentPlayer model.cells
-    }
+        m :: ms ->
+            ( model, Random.generate PlayMove <| Random.uniform m ms )
+
+
+updatePlayMove : Model -> Position -> ( Model, Cmd Msg )
+updatePlayMove model position =
+    if Dict.member position model.cells then
+        ( model, Cmd.none )
+
+    else
+        let
+            newCells =
+                model.cells
+                    |> Dict.insert position model.currentPlayer
+
+            newCurrentPlayer =
+                case model.currentPlayer of
+                    Player1 ->
+                        Player2
+
+                    Player2 ->
+                        Player1
+
+            newModel =
+                { model
+                    | currentPlayer = newCurrentPlayer
+                    , previousMove = Replay model
+                    , cells = newCells
+                }
+        in
+        ( newModel, Cmd.none )
 
 
 aButton : Model -> Position -> Html Msg
