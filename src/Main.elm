@@ -195,9 +195,8 @@ rangeBoardSize =
 cartesianPairs : List a -> List b -> List ( a, b )
 cartesianPairs xs ys =
     xs
-        |> List.map
+        |> List.concatMap
             (\x -> List.map (pair x) ys)
-        |> List.concat
 
 
 allMoves : List Position
