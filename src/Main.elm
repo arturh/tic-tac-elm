@@ -9,6 +9,7 @@ import Random
 import Tuple exposing (pair)
 
 
+main : Program () Model Msg
 main =
     Browser.element
         { init = init
@@ -16,10 +17,6 @@ main =
         , update = update
         , view = view
         }
-
-
-noCmd x =
-    ( x, Cmd.none )
 
 
 type alias Position =
@@ -39,6 +36,7 @@ type Player
     | Player2
 
 
+playerName : Player -> String
 playerName player =
     case player of
         Player1 ->
@@ -50,7 +48,7 @@ playerName player =
 
 type Moves
     = Newgame
-    | Replay Msg Model
+    | Replay Model
 
 
 type alias Model =
@@ -68,10 +66,12 @@ emptyModel =
     }
 
 
+init : () -> ( Model, Cmd msg )
 init () =
-    noCmd emptyModel
+    ( emptyModel, Cmd.none )
 
 
+subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
 
@@ -80,30 +80,19 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NoOp ->
-            noCmd model
+            ( model, Cmd.none )
 
         PlayMove pos ->
             if Dict.member pos model.cells then
-                noCmd model
+                ( model, Cmd.none )
 
             else
-                noCmd
-                    { model
-                        | currentPlayer =
-                            case model.currentPlayer of
-                                Player1 ->
-                                    Player2
-
-                                Player2 ->
-                                    Player1
-                        , previousMove = Replay msg model
-                        , cells = Dict.insert pos model.currentPlayer model.cells
-                    }
+                ( playMove model pos, Cmd.none )
 
         Random ->
             case validMoves model of
                 [] ->
-                    noCmd model
+                    ( model, Cmd.none )
 
                 m :: ms ->
                     ( model, Random.generate PlayMove <| Random.uniform m ms )
@@ -111,15 +100,31 @@ update msg model =
         Undo ->
             case model.previousMove of
                 Newgame ->
-                    noCmd model
+                    ( model, Cmd.none )
 
-                Replay _ previous ->
-                    noCmd previous
+                Replay previous ->
+                    ( previous, Cmd.none )
 
         Reset ->
-            noCmd emptyModel
+            ( emptyModel, Cmd.none )
 
 
+playMove : Model -> Position -> Model
+playMove model pos =
+    { model
+        | currentPlayer =
+            case model.currentPlayer of
+                Player1 ->
+                    Player2
+
+                Player2 ->
+                    Player1
+        , previousMove = Replay model
+        , cells = Dict.insert pos model.currentPlayer model.cells
+    }
+
+
+aButton : Model -> Position -> Html Msg
 aButton model pos =
     let
         cellText =
@@ -136,74 +141,73 @@ aButton model pos =
     button [ onClick (PlayMove pos) ] [ text cellText ]
 
 
-{-| Construct a table without `Attributes` crossing a `List a` and a `List b`
-through a generating function (a -> b -> Html msg) to produce a table with
-rows a and columns b.
-
-    mkTable _ [] _ = table [] []
-    mkTable _ (a1 :: ... :: an) [] = table [] (List.repeat n (tr [] []))
-    mkTable f (a1 :: ... :: an) (b1 :: ... :: bk) = table [] [
-        tr [] [
-            td [] [f a1 b1],
-            ...
-            td [] [f a1 bk]
-        ],
-        ...
-        tr [] [
-            td [] [f an b1],
-            ...
-            td [] [f an bk]
-        ],
-    ]
-
--}
-mkTable : (( a, b ) -> Html msg) -> List a -> List b -> Html msg
-mkTable mkData rows columns =
+viewTable : Model -> Html Msg
+viewTable model =
     let
-        mkCell a x =
-            [ mkData ( a, x ) ]
+        mkCell i j =
+            [ aButton model ( i, j ) ]
 
-        mkRow a =
-            List.map (td [] << mkCell a) columns
+        mkRow i =
+            List.map (td [] << mkCell i) rangeBoardSize
 
-        data =
-            List.map (tr [] << mkRow) rows
+        trs =
+            List.map (tr [] << mkRow) rangeBoardSize
     in
-    table [] data
+    table [] trs
 
 
 view : Model -> Html Msg
 view model =
     div []
         [ text (playerName model.currentPlayer)
-        , mkTable (aButton model) (range 0 2) (range 0 2)
+        , viewTable model
         , button [ onClick Random ] [ text "Random" ]
         , button [ onClick Undo ] [ text "Undo" ]
         , button [ onClick Reset ] [ text "Reset" ]
         ]
 
 
-{-| Monoidal (i.e. Applicative) structure for the List Monad.
-
-    cartesian _ [] _ = []
-    cartesian _ _ [] = []
-    cartesian f (a :: as) bs = (map (f a) bs) ++ (cartesian f as bs)
-
-    cartesian pair (a1 :: ... :: an) (b1 :: ... :: bk) =
-        [ (a1, b1), ... , (a1, bk), (a2, b1), ... , (an, b1), ... , (an , bk)]
-
--}
-cartesian : (a -> b -> c) -> List a -> List b -> List c
-cartesian f la lb =
-    la |> List.concatMap (\x -> List.map (f x) lb)
+boardSize : Int
+boardSize =
+    3
 
 
+rangeBoardSize : List Int
+rangeBoardSize =
+    range 0 (boardSize - 1)
+
+
+cartesianPairs : List a -> List b -> List ( a, b )
+cartesianPairs xs ys =
+    xs
+        |> List.map
+            (\x -> List.map (pair x) ys)
+        |> List.concat
+
+
+allMoves : List Position
+allMoves =
+    cartesianPairs rangeBoardSize rangeBoardSize
+
+
+validMoves : Model -> List Position
 validMoves model =
     let
-        played pos =
+        isPlayed pos =
             Dict.member pos model.cells
-
-        allPositions =
-            cartesian pair (range 0 2) (range 0 2)
     in
-    List.filter (not << played) allPositions
+    allMoves
+        |> List.filter (not << isPlayed)
+
+
+winning : List (List Position)
+winning =
+    [ [ ( 0, 0 ), ( 0, 1 ), ( 0, 2 ) ]
+    , [ ( 1, 0 ), ( 2, 1 ), ( 1, 2 ) ]
+    , [ ( 2, 0 ), ( 2, 1 ), ( 2, 2 ) ]
+    , [ ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ]
+    , [ ( 0, 1 ), ( 1, 1 ), ( 2, 1 ) ]
+    , [ ( 0, 2 ), ( 1, 2 ), ( 2, 2 ) ]
+    , [ ( 0, 0 ), ( 1, 1 ), ( 2, 2 ) ]
+    , [ ( 0, 2 ), ( 1, 1 ), ( 2, 0 ) ]
+    ]
