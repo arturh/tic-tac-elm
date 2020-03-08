@@ -177,18 +177,12 @@ rangeBoardSize =
     range 0 (boardSize - 1)
 
 
-flatten : List (List a) -> List a
-flatten =
-    List.concatMap identity
-
-
 cartesianPairs : List a -> List b -> List ( a, b )
 cartesianPairs xs ys =
     xs
-        -- produces List List Position
         |> List.map
             (\x -> List.map (pair x) ys)
-        |> flatten
+        |> List.concat
 
 
 allMoves : List Position
@@ -202,7 +196,8 @@ validMoves model =
         isPlayed pos =
             Dict.member pos model.cells
     in
-    List.filter (not << isPlayed) allMoves
+    allMoves
+        |> List.filter (not << isPlayed)
 
 
 winning : List (List Position)
