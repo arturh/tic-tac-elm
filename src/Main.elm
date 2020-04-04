@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import Html exposing (Html, button, div, table, td, text, tr)
 import Html.Events exposing (onClick)
 import List exposing (range)
+import Maybe exposing (Maybe)
 import Random
 import Tuple exposing (pair)
 
@@ -55,6 +56,7 @@ type alias Model =
     { currentPlayer : Player
     , previousMove : Moves
     , cells : Dict Position Player
+    , counter : WinningCounter
     }
 
 
@@ -63,6 +65,7 @@ emptyModel =
     { currentPlayer = Player1
     , previousMove = Newgame
     , cells = Dict.empty
+    , counter = initCounter
     }
 
 
@@ -144,11 +147,15 @@ updatePlayMove position model =
                     Player2 ->
                         Player1
 
+            newCounter =
+                updateCounter position model.currentPlayer model.counter
+
             newModel =
                 { model
                     | currentPlayer = newCurrentPlayer
                     , previousMove = Replay model
                     , cells = newCells
+                    , counter = newCounter
                 }
         in
         ( newModel, Cmd.none )
@@ -186,10 +193,24 @@ viewTable model =
     table [] trs
 
 
+viewWinner : Model -> Html Msg
+viewWinner model =
+    let
+        winningMessage =
+            case checkWinner model.counter of
+                Nothing ->
+                    playerName model.currentPlayer ++ " to play"
+
+                Just player ->
+                    playerName player ++ " wins"
+    in
+    text winningMessage
+
+
 view : Model -> Html Msg
 view model =
     div []
-        [ text (playerName model.currentPlayer)
+        [ viewWinner model
         , viewTable model
         , button [ onClick Random ] [ text "Random" ]
         , button [ onClick Undo ] [ text "Undo" ]
@@ -232,7 +253,7 @@ validMoves model =
 winning : List (List Position)
 winning =
     [ [ ( 0, 0 ), ( 0, 1 ), ( 0, 2 ) ]
-    , [ ( 1, 0 ), ( 2, 1 ), ( 1, 2 ) ]
+    , [ ( 1, 0 ), ( 1, 1 ), ( 1, 2 ) ]
     , [ ( 2, 0 ), ( 2, 1 ), ( 2, 2 ) ]
     , [ ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ]
     , [ ( 0, 1 ), ( 1, 1 ), ( 2, 1 ) ]
@@ -240,3 +261,69 @@ winning =
     , [ ( 0, 0 ), ( 1, 1 ), ( 2, 2 ) ]
     , [ ( 0, 2 ), ( 1, 1 ), ( 2, 0 ) ]
     ]
+
+
+type WinningStatus
+    = Free
+    | Lost
+    | Win Player Int
+
+
+type alias WinningCounter =
+    Dict (List Position) WinningStatus
+
+
+initCounter : WinningCounter
+initCounter =
+    winning |> List.map (\l -> ( l, Free )) |> Dict.fromList
+
+
+updateCounter : Position -> Player -> WinningCounter -> WinningCounter
+updateCounter position player =
+    let
+        updateWin winningStatus =
+            case winningStatus of
+                Free ->
+                    Win player 1
+
+                Lost ->
+                    Lost
+
+                Win occupant count ->
+                    if player == occupant then
+                        Win occupant (count + 1)
+
+                    else
+                        Lost
+
+        updatePlayer win winningStatus =
+            if List.member position win then
+                updateWin winningStatus
+
+            else
+                winningStatus
+    in
+    Dict.map updatePlayer
+
+
+checkWinner : WinningCounter -> Maybe Player
+checkWinner =
+    let
+        checkWin _ winningStatus maybePlayer =
+            case maybePlayer of
+                Nothing ->
+                    case winningStatus of
+                        Win player counter ->
+                            if counter == 3 then
+                                Just player
+
+                            else
+                                Nothing
+
+                        _ ->
+                            Nothing
+
+                justPlayer ->
+                    justPlayer
+    in
+    Dict.foldr checkWin Nothing
