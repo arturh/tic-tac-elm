@@ -269,6 +269,23 @@ type WinningStatus
     | Win Player Int
 
 
+updateWin : Player -> WinningStatus -> WinningStatus
+updateWin player winningStatus =
+    case winningStatus of
+        Free ->
+            Win player 1
+
+        Lost ->
+            Lost
+
+        Win occupant count ->
+            if player == occupant then
+                Win occupant (count + 1)
+
+            else
+                Lost
+
+
 type alias WinningCounter =
     Dict (List Position) WinningStatus
 
@@ -281,24 +298,9 @@ initCounter =
 updateCounter : Position -> Player -> WinningCounter -> WinningCounter
 updateCounter position player =
     let
-        updateWin winningStatus =
-            case winningStatus of
-                Free ->
-                    Win player 1
-
-                Lost ->
-                    Lost
-
-                Win occupant count ->
-                    if player == occupant then
-                        Win occupant (count + 1)
-
-                    else
-                        Lost
-
         updatePlayer win winningStatus =
             if List.member position win then
-                updateWin winningStatus
+                updateWin player winningStatus
 
             else
                 winningStatus
