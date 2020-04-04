@@ -155,10 +155,10 @@ updatePlayMove position model =
 
 
 aButton : Position -> Model -> Html Msg
-aButton pos model =
+aButton position model =
     let
         cellText =
-            case Dict.get pos model.cells of
+            case Dict.get position model.cells of
                 Nothing ->
                     "."
 
@@ -168,7 +168,7 @@ aButton pos model =
                 Just Player2 ->
                     "O"
     in
-    button [ onClick (PlayMove pos) ] [ text cellText ]
+    button [ onClick (PlayMove position) ] [ text cellText ]
 
 
 viewTable : Model -> Html Msg
@@ -222,8 +222,8 @@ allMoves =
 validMoves : Model -> List Position
 validMoves model =
     let
-        isPlayed pos =
-            Dict.member pos model.cells
+        isPlayed position =
+            Dict.member position model.cells
     in
     allMoves
         |> List.filter (not << isPlayed)
