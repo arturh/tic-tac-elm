@@ -77,27 +77,42 @@ subscriptions _ =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update msg =
     case msg of
         NoOp ->
-            ( model, Cmd.none )
+            noOp
 
         PlayMove position ->
-            updatePlayMove model position
+            updatePlayMove position
 
         Random ->
-            updateRandom model
+            updateRandom
 
         Undo ->
-            case model.previousMove of
-                Newgame ->
-                    ( model, Cmd.none )
-
-                Replay previous ->
-                    ( previous, Cmd.none )
+            undoMove
 
         Reset ->
-            ( emptyModel, Cmd.none )
+            resetModel
+
+
+noOp : Model -> ( Model, Cmd Msg )
+noOp model =
+    ( model, Cmd.none )
+
+
+undoMove : Model -> ( Model, Cmd Msg )
+undoMove model =
+    case model.previousMove of
+        Newgame ->
+            ( model, Cmd.none )
+
+        Replay previous ->
+            ( previous, Cmd.none )
+
+
+resetModel : Model -> ( Model, Cmd Msg )
+resetModel _ =
+    ( emptyModel, Cmd.none )
 
 
 updateRandom : Model -> ( Model, Cmd Msg )
@@ -110,8 +125,8 @@ updateRandom model =
             ( model, Random.generate PlayMove <| Random.uniform m ms )
 
 
-updatePlayMove : Model -> Position -> ( Model, Cmd Msg )
-updatePlayMove model position =
+updatePlayMove : Position -> Model -> ( Model, Cmd Msg )
+updatePlayMove position model =
     if Dict.member position model.cells then
         ( model, Cmd.none )
 
@@ -139,8 +154,8 @@ updatePlayMove model position =
         ( newModel, Cmd.none )
 
 
-aButton : Model -> Position -> Html Msg
-aButton model pos =
+aButton : Position -> Model -> Html Msg
+aButton pos model =
     let
         cellText =
             case Dict.get pos model.cells of
@@ -160,7 +175,7 @@ viewTable : Model -> Html Msg
 viewTable model =
     let
         mkCell i j =
-            [ aButton model ( i, j ) ]
+            [ aButton ( i, j ) model ]
 
         mkRow i =
             List.map (td [] << mkCell i) rangeBoardSize
