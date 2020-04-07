@@ -4,7 +4,7 @@ import Browser
 import Dict exposing (Dict)
 import Html exposing (Html, button, div, table, td, text, tr)
 import Html.Events exposing (onClick)
-import List exposing (range)
+import List exposing (length, range)
 import Maybe exposing (Maybe)
 import Random
 import Tuple exposing (pair)
@@ -316,12 +316,12 @@ updateCounter position player =
 checkWinner : WinningCounter -> Maybe Player
 checkWinner =
     let
-        checkWin _ winningStatus maybePlayer =
+        checkWin winningPosition winningStatus maybePlayer =
             case maybePlayer of
                 Nothing ->
                     case winningStatus of
                         Win player counter ->
-                            if counter == 3 then
+                            if counter == length winningPosition then
                                 Just player
 
                             else
