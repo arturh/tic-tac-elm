@@ -158,7 +158,12 @@ updatePlayMove position model =
                     , counter = newCounter
                 }
         in
-        ( newModel, Cmd.none )
+        case checkWinner model.counter of
+            Nothing ->
+                ( newModel, Cmd.none )
+
+            Just player ->
+                ( model, Cmd.none )
 
 
 aButton : Position -> Model -> Html Msg
